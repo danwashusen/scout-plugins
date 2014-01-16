@@ -45,7 +45,8 @@ class CassandraPlugin < Scout::Plugin
 
   def collect_data_centers_info
     data_centers = []
-    data = `#{option(:cassandra_dir)}/bin/nodetool status`
+    cassandra_dir = option(:cassandra_dir) || '/usr/local/cassandra'
+    data = `#{cassandra_dir}/bin/nodetool status`
     raise UnableToConnect if data =~ /Connection refused/
     current_data_center = nil
     data.each_line do |line|
