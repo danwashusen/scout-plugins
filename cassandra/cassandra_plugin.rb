@@ -6,10 +6,14 @@ class CassandraPlugin < Scout::Plugin
   DATA_SUFFIXES = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
 
   OPTIONS = """
-    cassandra_dir:
-      default: '/usr/local/cassandra'
-      name: Cassandra install directory
-      notes: Directory which contain Cassandra's bin/
+    nodetool_path:
+      default: '/usr/bin/nodetool'
+      name: Cassandra nodetool path
+      notes: Path to the Cassandra nodetool executable.
+    cassandra_host:
+      default: 127.0.0.1
+      name: Cassandra host
+      notes: Cassnadra node hostname or ip address.
   """
 
   def build_report
@@ -45,8 +49,9 @@ class CassandraPlugin < Scout::Plugin
 
   def collect_data_centers_info
     data_centers = []
-    cassandra_dir = option(:cassandra_dir) || '/usr/local/cassandra'
-    data = `#{cassandra_dir}/bin/nodetool status`
+    nodetool_path = option(:nodetool_path) || '/usr/bin/nodetool'
+    cassandra_host = option(:cassandra_host) || '127.0.0.1'
+    data = `#{nodetool_path} --host #{cassandra_host} status`
     raise UnableToConnect if data =~ /Connection refused/
     current_data_center = nil
     data.each_line do |line|
