@@ -56,9 +56,9 @@ class CassandraPlugin < Scout::Plugin
     nodetool_path = option(:nodetool_path)
     cassandra_host = option(:cassandra_host)
     data = `#{nodetool_path} --host #{cassandra_host} status 2>&1`
-    raise InvalidNodetool if not $?.success?
     raise UnableToConnect if data =~ /Connection refused/
     raise UnableToConnect if data =~ /Cannot resolve/
+    raise InvalidNodetool if not $?.success?
     current_data_center = nil
     data.each_line do |line|
       next if line.strip.empty?
