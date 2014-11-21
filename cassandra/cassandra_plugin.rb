@@ -1,20 +1,22 @@
 class CassandraPlugin < Scout::Plugin
-  needs 'csv'
 
   class UnableToConnect < RuntimeError; end
+  class InvalidNodetool < RuntimeError; end
 
   DATA_SUFFIXES = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
 
-  OPTIONS = """
+  OPTIONS = <<-EOS
     nodetool_path:
-      default: '/usr/bin/nodetool'
+      default: /usr/bin/nodetool
       name: Cassandra nodetool path
       notes: Path to the Cassandra nodetool executable.
     cassandra_host:
       default: 127.0.0.1
       name: Cassandra host
       notes: Cassnadra node hostname or ip address.
-  """
+  EOS
+
+  needs 'csv'
 
   def build_report
     data_centers = post_process_data_centers collect_data_centers_info
@@ -27,6 +29,8 @@ class CassandraPlugin < Scout::Plugin
     report data
   rescue UnableToConnect
     alert "Plugin was unable to connect to C* cluster"
+  rescue InvalidNodetool
+    error "Plugin was unable to exec nodetool_path '#{option(:nodetool_path)}'"
   end
 
   protected
@@ -49,10 +53,12 @@ class CassandraPlugin < Scout::Plugin
 
   def collect_data_centers_info
     data_centers = []
-    nodetool_path = option(:nodetool_path) || '/usr/bin/nodetool'
-    cassandra_host = option(:cassandra_host) || '127.0.0.1'
-    data = `#{nodetool_path} --host #{cassandra_host} status`
+    nodetool_path = option(:nodetool_path)
+    cassandra_host = option(:cassandra_host)
+    data = `#{nodetool_path} --host #{cassandra_host} status 2>&1`
+    raise InvalidNodetool if not $?.success?
     raise UnableToConnect if data =~ /Connection refused/
+    raise UnableToConnect if data =~ /Cannot resolve/
     current_data_center = nil
     data.each_line do |line|
       next if line.strip.empty?
